@@ -1,0 +1,14 @@
+services:
+  postgres:
+    image: postgres:17
+    environment:
+      POSTGRES_DB: operon
+      POSTGRES_USER: operon
+      POSTGRES_PASSWORD: operon
+    ports:
+      - "55432:5432"
+    volumes:
+      - operon_postgres_data:/var/lib/postgresql/data
+  
+volumes:
+  operon_postgres_data:
