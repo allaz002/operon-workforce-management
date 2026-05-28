@@ -1,3 +1,13 @@
 spring:
   application:
     name: workforce
+
+  datasource:
+    url: jdbc:postgresql://localhost:55432/operon
+    username: operon
+    password: operon
+
+  jpa:
+    hibernate:
+      ddl-auto: validate
+    open-in-view: false
