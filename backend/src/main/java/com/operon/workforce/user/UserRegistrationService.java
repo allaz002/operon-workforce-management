@@ -12,7 +12,7 @@ public class UserRegistrationService {
 
     public UserResponse registerUser(RegisterUserRequest request) {
         if (this.userRepository.existsByEmail(request.email())) {
-            throw new IllegalArgumentException("Email is already registered");
+            throw new DuplicateEmailException("Email is already registered");
         }
 
         User user = new User(request.firstName(), request.lastName(), request.email(), request.password(),
@@ -21,6 +21,6 @@ public class UserRegistrationService {
 
         return new UserResponse(savedUser.getId(), savedUser.getFirstName(), savedUser.getLastName(),
                 savedUser.getEmail(), savedUser.getRole(), savedUser.getApprovalStatus(), savedUser.getCreatedAt());
-        
+
     }
 }
