@@ -1,13 +1,16 @@
 package com.operon.workforce.user;
 
+import org.springframework.security.crypto.password.PasswordEncoder;
 import org.springframework.stereotype.Service;
 
 @Service
 public class UserRegistrationService {
     private final UserRepository userRepository;
+    private final PasswordEncoder passwordEncoder;
 
-    public UserRegistrationService(UserRepository userRepository) {
+    public UserRegistrationService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
         this.userRepository = userRepository;
+        this.passwordEncoder = passwordEncoder;
     }
 
     public UserResponse registerUser(RegisterUserRequest request) {
@@ -15,7 +18,9 @@ public class UserRegistrationService {
             throw new DuplicateEmailException("Email is already registered");
         }
 
-        User user = new User(request.firstName(), request.lastName(), request.email(), request.password(),
+        String passwordHash = passwordEncoder.encode(request.password());
+
+        User user = new User(request.firstName(), request.lastName(), request.email(), passwordHash,
                 UserRole.EMPLOYEE);
         User savedUser = userRepository.save(user);
 
