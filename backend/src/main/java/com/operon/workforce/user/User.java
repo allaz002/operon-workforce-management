@@ -78,4 +78,8 @@ public class User {
     public Instant getCreatedAt() {
         return createdAt;
     }
+
+    public void approve() {
+        this.approvalStatus = UserApprovalStatus.APPROVED;
+    }
 }

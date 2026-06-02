@@ -1,6 +1,7 @@
 package com.operon.workforce.common;
 
 import com.operon.workforce.user.DuplicateEmailException;
+import com.operon.workforce.user.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
 import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
@@ -29,7 +30,7 @@ public class GlobalExceptionHandler {
     }
 
     @ExceptionHandler(MethodArgumentNotValidException.class)
-    public ResponseEntity<ApiErrorResponse> handleValidationError(MethodArgumentNotValidException exception, HttpServletRequest request) {
+    public ResponseEntity<ApiErrorResponse> handleValidationError(HttpServletRequest request) {
 
         HttpStatus status = HttpStatus.BAD_REQUEST;
 
@@ -43,5 +44,21 @@ public class GlobalExceptionHandler {
 
         return ResponseEntity.status(status).body(errorResponse);
 
+    }
+
+    @ExceptionHandler(UserNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserNotFound(UserNotFoundException exception, HttpServletRequest request) {
+
+        HttpStatus status = HttpStatus.NOT_FOUND;
+
+        ApiErrorResponse errorResponse = new ApiErrorResponse(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(status).body(errorResponse);
     }
 }
