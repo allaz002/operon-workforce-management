@@ -15,7 +15,7 @@ public class UserRegistrationService {
 
     public UserResponse registerUser(RegisterUserRequest request) {
         if (this.userRepository.existsByEmail(request.email())) {
-            throw new DuplicateEmailException("Email is already registered");
+            throw new DuplicateEmailException();
         }
 
         String passwordHash = passwordEncoder.encode(request.password());

@@ -13,7 +13,7 @@ public class UserApprovalService {
 
     @Transactional
     public UserResponse approveUser(Long userId) {
-        User user = this.userRepository.findById(userId).orElseThrow(() -> new UserNotFoundException("User not found"));
+        User user = this.userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
         user.approve();
         User savedUser = this.userRepository.save(user);

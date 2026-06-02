@@ -18,7 +18,6 @@ public class UserApprovalController {
     @PatchMapping("/{userId}/approve")
     public ResponseEntity<UserResponse> approveUser(@PathVariable("userId") Long userId) {
         UserResponse userResponse = userApprovalService.approveUser(userId);
-
         return ResponseEntity.ok(userResponse);
     }
 }

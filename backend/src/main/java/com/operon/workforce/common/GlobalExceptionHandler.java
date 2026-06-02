@@ -1,5 +1,7 @@
 package com.operon.workforce.common;
 
+import com.operon.workforce.auth.InvalidLoginException;
+import com.operon.workforce.auth.UserNotApprovedException;
 import com.operon.workforce.user.DuplicateEmailException;
 import com.operon.workforce.user.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -18,7 +20,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleDuplicateEmail(DuplicateEmailException exception, HttpServletRequest request) {
 
         HttpStatus status = HttpStatus.CONFLICT;
-
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 Instant.now(),
                 status.value(),
@@ -33,7 +34,6 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleValidationError(HttpServletRequest request) {
 
         HttpStatus status = HttpStatus.BAD_REQUEST;
-
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 Instant.now(),
                 status.value(),
@@ -50,7 +50,36 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleUserNotFound(UserNotFoundException exception, HttpServletRequest request) {
 
         HttpStatus status = HttpStatus.NOT_FOUND;
+        ApiErrorResponse errorResponse = new ApiErrorResponse(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
 
+        return ResponseEntity.status(status).body(errorResponse);
+    }
+
+    @ExceptionHandler(InvalidLoginException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidLogin(InvalidLoginException exception, HttpServletRequest request) {
+
+        HttpStatus status = HttpStatus.UNAUTHORIZED;
+        ApiErrorResponse errorResponse = new ApiErrorResponse(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(status).body(errorResponse);
+    }
+
+    @ExceptionHandler(UserNotApprovedException.class)
+    public ResponseEntity<ApiErrorResponse> handleUserNotApproved(UserNotApprovedException exception, HttpServletRequest request) {
+
+        HttpStatus status = HttpStatus.FORBIDDEN;
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 Instant.now(),
                 status.value(),
