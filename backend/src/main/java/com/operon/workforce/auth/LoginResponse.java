@@ -4,6 +4,7 @@ import com.operon.workforce.user.UserApprovalStatus;
 import com.operon.workforce.user.UserRole;
 
 public record LoginResponse(
+        String token,
         Long id,
         String firstName,
         String lastName,

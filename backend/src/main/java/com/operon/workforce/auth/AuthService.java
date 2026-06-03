@@ -10,10 +10,12 @@ import org.springframework.stereotype.Service;
 public class AuthService {
     private final UserRepository userRepository;
     private final PasswordEncoder passwordEncoder;
+    private final JwtTokenService jwtTokenService;
 
-    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder) {
+    public AuthService(UserRepository userRepository, PasswordEncoder passwordEncoder, JwtTokenService jwtTokenService) {
         this.userRepository = userRepository;
         this.passwordEncoder = passwordEncoder;
+        this.jwtTokenService = jwtTokenService;
     }
 
     public LoginResponse login(LoginRequest loginRequest) {
@@ -28,7 +30,10 @@ public class AuthService {
             throw new UserNotApprovedException();
         }
 
-        return new LoginResponse(user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(), user.getRole(),
+        String token = jwtTokenService.generateToken(user);
+
+        return new LoginResponse(token, user.getId(), user.getFirstName(), user.getLastName(), user.getEmail(),
+                user.getRole(),
                 user.getApprovalStatus());
     }
 }
