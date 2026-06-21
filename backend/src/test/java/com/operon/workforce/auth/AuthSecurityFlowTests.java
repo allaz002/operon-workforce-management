@@ -15,6 +15,7 @@ import tools.jackson.databind.JsonNode;
 import tools.jackson.databind.ObjectMapper;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.patch;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -22,6 +23,19 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 @SpringBootTest
 @AutoConfigureMockMvc
 class AuthSecurityFlowTests {
+
+    // Admin Data
+    private static final String ADMIN_FIRST_NAME = "Administrator";
+    private static final String ADMIN_LAST_NAME = "User";
+    private static final String ADMIN_EMAIL = "admin@operon.local";
+    private static final String ADMIN_PASSWORD = "admin12345";
+
+    // User Data
+    private static final String USER_FIRST_NAME = "Max";
+    private static final String USER_LAST_NAME = "Muster";
+    private static final String USER_EMAIL = "max@example.com";
+    private static final String USER_PASSWORD = "password123";
+
 
     @Autowired
     private MockMvc mockMvc;
@@ -36,60 +50,52 @@ class AuthSecurityFlowTests {
     private PasswordEncoder passwordEncoder;
 
     @BeforeEach
-    public void cleanDatabase() {
+    public void prepareDatabase() {
         userRepository.deleteAll();
+
+        String adminPasswordHash = passwordEncoder.encode(ADMIN_PASSWORD);
+
+        User admin = new User(ADMIN_FIRST_NAME, ADMIN_LAST_NAME, ADMIN_EMAIL, adminPasswordHash, UserRole.ADMIN);
+        admin.approve();
+        userRepository.save(admin);
     }
 
-    @Test
-    public void pendingUserCannotLogin() throws Exception {
+    private Long registerAndReturnId(String firstName, String lastName, String email, String password) throws Exception {
         RegisterUserRequest registerUserRequest = new RegisterUserRequest(
-                "Max",
-                "Muster",
-                "max@example.com",
-                "password123"
-        );
+                firstName,
+                lastName,
+                email,
+                password);
         String jsonRegisterRequest = objectMapper.writeValueAsString(registerUserRequest);
 
         RequestBuilder postRegister = post("/api/users/register")
                 .contentType(MediaType.APPLICATION_JSON)
                 .content(jsonRegisterRequest);
 
-        mockMvc.perform(postRegister)
-                .andExpect(status().is(201))
+        MvcResult registerResult = mockMvc.perform(postRegister)
+                .andExpect(status().isCreated())
+                .andExpect(jsonPath("$.id").exists())
                 .andExpect(jsonPath("$.approvalStatus").value(UserApprovalStatus.PENDING.toString()))
+                .andExpect(jsonPath("$.password").doesNotExist())
                 .andExpect(jsonPath("$.passwordHash").doesNotExist())
-                .andExpect(jsonPath("$.password").doesNotExist());
+                .andReturn();
 
-        LoginRequest loginRequest = new LoginRequest(
-                "max@example.com",
-                "password123"
-        );
-        String jsonLoginRequest = objectMapper.writeValueAsString(loginRequest);
-
-        RequestBuilder postLogin = post("/api/auth/login")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(jsonLoginRequest);
-
-        mockMvc.perform(postLogin)
-                .andExpect(status().isForbidden())
-                .andExpect(jsonPath("$.error").value("Forbidden"))
-                .andExpect(jsonPath("$.message").value(UserNotApprovedException.errorMessage));
+        String idResponseBody = registerResult.getResponse().getContentAsString();
+        JsonNode idResponseJson = objectMapper.readTree(idResponseBody);
+        return idResponseJson.get("id").asLong();
     }
 
-    @Test
-    public void adminCanLoginAndReceivesToken() throws Exception {
-        String adminFirstName = "Administrator";
-        String adminLastName = "User";
-        String adminEmail = "admin@operon.local";
-        String adminPassword = "admin12345";
-        String adminPasswordHash = passwordEncoder.encode(adminPassword);
+    private void approveUserWithAdminToken(Long userId, String adminToken) throws Exception {
+        RequestBuilder approveUserRequest = patch("/api/users/{userId}/approve", userId)
+                .header("Authorization", "Bearer " + adminToken);
 
-        User admin = new User(adminFirstName, adminLastName, adminEmail, adminPasswordHash, UserRole.ADMIN);
-        admin.approve();
-        userRepository.save(admin);
-
-        String adminToken = loginAndReturnToken(adminEmail, adminPassword);
-        assertThat(adminToken).isNotBlank();
+        mockMvc.perform(approveUserRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(userId))
+                .andExpect(jsonPath("$.role").value(UserRole.EMPLOYEE.toString()))
+                .andExpect(jsonPath("$.approvalStatus").value(UserApprovalStatus.APPROVED.toString()))
+                .andExpect(jsonPath("$.password").doesNotExist())
+                .andExpect(jsonPath("$.passwordHash").doesNotExist());
     }
 
     private String loginAndReturnToken(String email, String password) throws Exception {
@@ -111,5 +117,55 @@ class AuthSecurityFlowTests {
         String loginResponseBody = loginResult.getResponse().getContentAsString();
         JsonNode loginResponseJson = objectMapper.readTree(loginResponseBody);
         return loginResponseJson.get("token").asString();
+    }
+
+    @Test
+    public void pendingUserCannotLogin() throws Exception {
+        RegisterUserRequest registerUserRequest = new RegisterUserRequest(
+                USER_FIRST_NAME,
+                USER_LAST_NAME,
+                USER_EMAIL,
+                USER_PASSWORD
+        );
+        String jsonRegisterRequest = objectMapper.writeValueAsString(registerUserRequest);
+
+        RequestBuilder postRegister = post("/api/users/register")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonRegisterRequest);
+
+        mockMvc.perform(postRegister)
+                .andExpect(status().is(201))
+                .andExpect(jsonPath("$.approvalStatus").value(UserApprovalStatus.PENDING.toString()))
+                .andExpect(jsonPath("$.passwordHash").doesNotExist())
+                .andExpect(jsonPath("$.password").doesNotExist());
+
+        LoginRequest loginRequest = new LoginRequest(
+                USER_EMAIL,
+                USER_PASSWORD
+        );
+        String jsonLoginRequest = objectMapper.writeValueAsString(loginRequest);
+
+        RequestBuilder postLogin = post("/api/auth/login")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonLoginRequest);
+
+        mockMvc.perform(postLogin)
+                .andExpect(status().isForbidden())
+                .andExpect(jsonPath("$.error").value("Forbidden"))
+                .andExpect(jsonPath("$.message").value(UserNotApprovedException.errorMessage));
+    }
+
+    @Test
+    public void adminCanLoginAndReceivesToken() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        assertThat(adminToken).isNotBlank();
+    }
+
+    @Test
+    public void adminCanApprovePendingUser() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        Long userId = registerAndReturnId(USER_FIRST_NAME, USER_LAST_NAME, USER_EMAIL, USER_PASSWORD);
+        approveUserWithAdminToken(userId, adminToken);
     }
 }
