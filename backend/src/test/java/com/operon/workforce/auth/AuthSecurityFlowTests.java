@@ -30,12 +30,17 @@ class AuthSecurityFlowTests {
     private static final String ADMIN_EMAIL = "admin@operon.local";
     private static final String ADMIN_PASSWORD = "admin12345";
 
-    // User Data
-    private static final String USER_FIRST_NAME = "Max";
-    private static final String USER_LAST_NAME = "Muster";
-    private static final String USER_EMAIL = "max@example.com";
-    private static final String USER_PASSWORD = "password123";
+    // User 1 Data
+    private static final String FIRST_USER_FIRST_NAME = "Max";
+    private static final String FIRST_USER_LAST_NAME = "Muster";
+    private static final String FIRST_USER_EMAIL = "max@example.com";
+    private static final String FIRST_USER_PASSWORD = "password123";
 
+    // User 2 Data
+    private static final String SECOND_USER_FIRST_NAME = "Thomas";
+    private static final String SECOND_USER_LAST_NAME = "Mueller";
+    private static final String SECOND_USER_EMAIL = "thomas@example.com";
+    private static final String SECOND_USER_PASSWORD = "password123";
 
     @Autowired
     private MockMvc mockMvc;
@@ -122,10 +127,10 @@ class AuthSecurityFlowTests {
     @Test
     public void pendingUserCannotLogin() throws Exception {
         RegisterUserRequest registerUserRequest = new RegisterUserRequest(
-                USER_FIRST_NAME,
-                USER_LAST_NAME,
-                USER_EMAIL,
-                USER_PASSWORD
+                FIRST_USER_FIRST_NAME,
+                FIRST_USER_LAST_NAME,
+                FIRST_USER_EMAIL,
+                FIRST_USER_PASSWORD
         );
         String jsonRegisterRequest = objectMapper.writeValueAsString(registerUserRequest);
 
@@ -140,8 +145,8 @@ class AuthSecurityFlowTests {
                 .andExpect(jsonPath("$.password").doesNotExist());
 
         LoginRequest loginRequest = new LoginRequest(
-                USER_EMAIL,
-                USER_PASSWORD
+                FIRST_USER_EMAIL,
+                FIRST_USER_PASSWORD
         );
         String jsonLoginRequest = objectMapper.writeValueAsString(loginRequest);
 
@@ -165,7 +170,51 @@ class AuthSecurityFlowTests {
     public void adminCanApprovePendingUser() throws Exception {
         String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
 
-        Long userId = registerAndReturnId(USER_FIRST_NAME, USER_LAST_NAME, USER_EMAIL, USER_PASSWORD);
+        Long userId = registerAndReturnId(FIRST_USER_FIRST_NAME, FIRST_USER_LAST_NAME, FIRST_USER_EMAIL,
+                FIRST_USER_PASSWORD);
         approveUserWithAdminToken(userId, adminToken);
+    }
+
+    @Test
+    public void employeeCannotApprovePendingUser() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        Long firstUserId = registerAndReturnId(FIRST_USER_FIRST_NAME, FIRST_USER_LAST_NAME, FIRST_USER_EMAIL,
+                FIRST_USER_PASSWORD);
+        approveUserWithAdminToken(firstUserId, adminToken);
+
+        String userToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
+
+        Long secondUserId = registerAndReturnId(SECOND_USER_FIRST_NAME, SECOND_USER_LAST_NAME, SECOND_USER_EMAIL,
+                SECOND_USER_PASSWORD);
+
+        RequestBuilder approveUserRequest = patch("/api/users/{userId}/approve", secondUserId)
+                .header("Authorization", "Bearer " + userToken);
+
+        mockMvc.perform(approveUserRequest)
+                .andExpect(status().isForbidden());
+    }
+
+    @Test
+    public void missingTokenCannotApprovePendingUser() throws Exception {
+        Long userId = registerAndReturnId(FIRST_USER_FIRST_NAME, FIRST_USER_LAST_NAME, FIRST_USER_EMAIL,
+                FIRST_USER_PASSWORD);
+
+        RequestBuilder approveUserRequest = patch("/api/users/{userId}/approve", userId);
+
+        mockMvc.perform(approveUserRequest)
+                .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void invalidTokenCannotApprovePendingUser() throws Exception {
+        Long userId = registerAndReturnId(FIRST_USER_FIRST_NAME, FIRST_USER_LAST_NAME, FIRST_USER_EMAIL,
+                FIRST_USER_PASSWORD);
+
+        RequestBuilder approveUserRequest = patch("/api/users/{userId}/approve", userId)
+                .header("Authorization", "Bearer " + "invalid");
+
+        mockMvc.perform(approveUserRequest)
+                .andExpect(status().isUnauthorized());
     }
 }
