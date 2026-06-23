@@ -2,6 +2,7 @@ package com.operon.workforce.common;
 
 import com.operon.workforce.auth.InvalidLoginException;
 import com.operon.workforce.auth.UserNotApprovedException;
+import com.operon.workforce.availability.InvalidAvailabilityTimeRangeException;
 import com.operon.workforce.user.DuplicateEmailException;
 import com.operon.workforce.user.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -80,6 +81,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleUserNotApproved(UserNotApprovedException exception, HttpServletRequest request) {
 
         HttpStatus status = HttpStatus.FORBIDDEN;
+        ApiErrorResponse errorResponse = new ApiErrorResponse(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(status).body(errorResponse);
+    }
+
+    @ExceptionHandler(InvalidAvailabilityTimeRangeException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidAvailabilityTimeRange(InvalidAvailabilityTimeRangeException exception, HttpServletRequest request) {
+
+        HttpStatus status = HttpStatus.BAD_REQUEST;
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 Instant.now(),
                 status.value(),

@@ -26,7 +26,7 @@ public class AvailabilityService {
         Instant endTime = createAvailabilityRequest.endTime();
 
         if (!endTime.isAfter(startTime)) {
-            throw new IllegalArgumentException();
+            throw new InvalidAvailabilityTimeRangeException();
         }
 
         Availability availability = new Availability(

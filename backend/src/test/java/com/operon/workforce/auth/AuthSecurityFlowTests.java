@@ -1,5 +1,6 @@
 package com.operon.workforce.auth;
 
+import com.operon.workforce.availability.AvailabilityRepository;
 import com.operon.workforce.user.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -54,8 +55,12 @@ class AuthSecurityFlowTests {
     @Autowired
     private PasswordEncoder passwordEncoder;
 
+    @Autowired
+    private AvailabilityRepository availabilityRepository;
+
     @BeforeEach
     public void prepareDatabase() {
+        availabilityRepository.deleteAll();
         userRepository.deleteAll();
 
         String adminPasswordHash = passwordEncoder.encode(ADMIN_PASSWORD);

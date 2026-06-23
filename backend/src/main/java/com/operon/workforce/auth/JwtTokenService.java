@@ -63,6 +63,11 @@ public class JwtTokenService {
         return parseClaims(token).get("role", String.class);
     }
 
+    public Long getUserId(String token) {
+        Number userId = parseClaims(token).get("userId", Number.class);
+        return userId.longValue();
+    }
+
     private SecretKey getSigningKey() {
         byte[] keyBytes = jwtProperties.secret().getBytes(StandardCharsets.UTF_8);
         return Keys.hmacShaKeyFor(keyBytes);
