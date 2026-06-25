@@ -7,6 +7,8 @@ import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
 import java.time.Instant;
+import java.util.ArrayList;
+import java.util.List;
 
 @Service
 public class AvailabilityService {
@@ -45,5 +47,23 @@ public class AvailabilityService {
                 savedAvailability.getNote(),
                 savedAvailability.getCreatedAt()
         );
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvailabilityResponse> getAvailabilitiesForUser(Long userId) {
+        List<Availability> availabilities = availabilityRepository.findByUserIdOrderByStartTimeAsc(userId);
+        List<AvailabilityResponse> availabilitiesResponse = new ArrayList<>();
+
+        for (Availability availability : availabilities) {
+            availabilitiesResponse.add(new AvailabilityResponse(
+                    availability.getId(),
+                    availability.getUser().getId(),
+                    availability.getStartTime(),
+                    availability.getEndTime(),
+                    availability.getNote(),
+                    availability.getCreatedAt()
+            ));
+        }
+        return availabilitiesResponse;
     }
 }
