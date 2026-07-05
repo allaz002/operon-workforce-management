@@ -21,8 +21,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -258,5 +257,52 @@ class AvailabilityControllerTests {
                 .andExpect(jsonPath("$[0].note").value(SECOND_AVAILABILITY_NOTE))
                 .andExpect(jsonPath("$[0].createdAt").exists())
                 .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    public void approvedEmployeeCanDeleteOwnAvailabilities() throws Exception {
+        String userToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
+        User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+
+        Availability firstAvailability = new Availability(
+                user,
+                FIRST_AVAILABILITY_START_TIME,
+                FIRST_AVAILABILITY_END_TIME,
+                FIRST_AVAILABILITY_NOTE
+        );
+        availabilityRepository.save(firstAvailability);
+
+        RequestBuilder deleteAvailabilityRequest = delete("/api/availabilities/" + firstAvailability.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + userToken);
+
+        mockMvc.perform(deleteAvailabilityRequest)
+                .andExpect(status().isNoContent());
+
+        assertThat(availabilityRepository.count()).isZero();
+    }
+
+    @Test
+    public void approvedEmployeeCannotDeleteOtherUsersAvailabilities() throws Exception {
+        User firstUser = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+
+        Availability firstAvailability = new Availability(
+                firstUser,
+                FIRST_AVAILABILITY_START_TIME,
+                FIRST_AVAILABILITY_END_TIME,
+                FIRST_AVAILABILITY_NOTE
+        );
+        firstAvailability = availabilityRepository.save(firstAvailability);
+
+        String secondUserToken = loginAndReturnToken(SECOND_USER_EMAIL, SECOND_USER_PASSWORD);
+
+        RequestBuilder deleteAvailabilityRequest = delete("/api/availabilities/" + firstAvailability.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + secondUserToken);
+
+        mockMvc.perform(deleteAvailabilityRequest)
+                .andExpect(status().isNotFound());
+
+        assertThat(availabilityRepository.count()).isEqualTo(1);
     }
 }

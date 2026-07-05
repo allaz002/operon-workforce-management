@@ -66,4 +66,13 @@ public class AvailabilityService {
         }
         return availabilitiesResponse;
     }
+
+    @Transactional
+    public void deleteAvailability(Long userId, Long availabilityId) {
+        Availability availability = availabilityRepository
+                .findByIdAndUser_Id(availabilityId, userId)
+                .orElseThrow(AvailabilityNotFoundException::new);
+
+        availabilityRepository.delete(availability);
+    }
 }

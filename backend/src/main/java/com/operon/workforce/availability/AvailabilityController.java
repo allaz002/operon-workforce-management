@@ -36,4 +36,14 @@ public class AvailabilityController {
         return ResponseEntity.ok(availabilityService.getAvailabilitiesForUser(userId));
     }
 
+    @DeleteMapping("/{availabilityId}")
+    public ResponseEntity<Void> deleteAvailability(Authentication authentication, @PathVariable Long availabilityId) {
+        AuthenticatedUser authenticatedUser = (AuthenticatedUser) authentication.getPrincipal();
+        Long userId = authenticatedUser.userId();
+
+        availabilityService.deleteAvailability(userId, availabilityId);
+
+        return ResponseEntity.noContent().build();
+    }
+
 }
