@@ -31,15 +31,26 @@ import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.
 class AvailabilityControllerTests {
 
     // Availability 1 Data
-    private static final Instant AVAILABILITY_START_TIME = Instant.parse("2026-01-01T08:00:00Z");
-    private static final Instant AVAILABILITY_END_TIME = Instant.parse("2026-01-01T14:00:00Z");
-    private static final String AVAILABILITY_NOTE = "Doctor appointment";
+    private static final Instant FIRST_AVAILABILITY_START_TIME = Instant.parse("2026-01-01T08:00:00Z");
+    private static final Instant FIRST_AVAILABILITY_END_TIME = Instant.parse("2026-01-01T14:00:00Z");
+    private static final String FIRST_AVAILABILITY_NOTE = "Doctor appointment";
+
+    // Availability 2 Data
+    private static final Instant SECOND_AVAILABILITY_START_TIME = Instant.parse("2026-01-02T10:00:00Z");
+    private static final Instant SECOND_AVAILABILITY_END_TIME = Instant.parse("2026-01-02T16:00:00Z");
+    private static final String SECOND_AVAILABILITY_NOTE = "Available after training";
 
     // User 1 Data
     private static final String FIRST_USER_FIRST_NAME = "Max";
     private static final String FIRST_USER_LAST_NAME = "Muster";
     private static final String FIRST_USER_EMAIL = "max@example.com";
     private static final String FIRST_USER_PASSWORD = "password123";
+
+    // User 2 Data
+    private static final String SECOND_USER_FIRST_NAME = "Thomas";
+    private static final String SECOND_USER_LAST_NAME = "Mueller";
+    private static final String SECOND_USER_EMAIL = "thomas@example.com";
+    private static final String SECOND_USER_PASSWORD = "password123";
 
     @Autowired
     private MockMvc mockMvc;
@@ -61,11 +72,18 @@ class AvailabilityControllerTests {
         availabilityRepository.deleteAll();
         userRepository.deleteAll();
 
-        String userPasswordHash = passwordEncoder.encode(FIRST_USER_PASSWORD);
-        User user = new User(FIRST_USER_FIRST_NAME, FIRST_USER_LAST_NAME, FIRST_USER_EMAIL, userPasswordHash,
+        String firstUserPasswordHash = passwordEncoder.encode(FIRST_USER_PASSWORD);
+        User firstUser = new User(FIRST_USER_FIRST_NAME, FIRST_USER_LAST_NAME, FIRST_USER_EMAIL, firstUserPasswordHash,
                 UserRole.EMPLOYEE);
-        user.approve();
-        userRepository.save(user);
+        firstUser.approve();
+        userRepository.save(firstUser);
+
+        String secondUserPasswordHash = passwordEncoder.encode(SECOND_USER_PASSWORD);
+        User secondUser = new User(SECOND_USER_FIRST_NAME, SECOND_USER_LAST_NAME, SECOND_USER_EMAIL,
+                secondUserPasswordHash,
+                UserRole.EMPLOYEE);
+        secondUser.approve();
+        userRepository.save(secondUser);
     }
 
     private String loginAndReturnToken(String email, String password) throws Exception {
@@ -94,9 +112,9 @@ class AvailabilityControllerTests {
         String userToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
 
         CreateAvailabilityRequest createAvailabilityRequest = new CreateAvailabilityRequest(
-                AVAILABILITY_START_TIME,
-                AVAILABILITY_END_TIME,
-                AVAILABILITY_NOTE
+                FIRST_AVAILABILITY_START_TIME,
+                FIRST_AVAILABILITY_END_TIME,
+                FIRST_AVAILABILITY_NOTE
         );
         String jsonCreateAvailabilityRequest = objectMapper.writeValueAsString(createAvailabilityRequest);
 
@@ -108,9 +126,9 @@ class AvailabilityControllerTests {
         mockMvc.perform(postCreateAvailability)
                 .andExpect(status().isCreated())
                 .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.startTime").value(AVAILABILITY_START_TIME.toString()))
-                .andExpect(jsonPath("$.endTime").value(AVAILABILITY_END_TIME.toString()))
-                .andExpect(jsonPath("$.note").value(AVAILABILITY_NOTE))
+                .andExpect(jsonPath("$.startTime").value(FIRST_AVAILABILITY_START_TIME.toString()))
+                .andExpect(jsonPath("$.endTime").value(FIRST_AVAILABILITY_END_TIME.toString()))
+                .andExpect(jsonPath("$.note").value(FIRST_AVAILABILITY_NOTE))
                 .andExpect(jsonPath("$.createdAt").exists());
 
         assertThat(availabilityRepository.count()).isEqualTo(1);
@@ -119,9 +137,9 @@ class AvailabilityControllerTests {
     @Test
     public void missingTokenCannotCreateAvailability() throws Exception {
         CreateAvailabilityRequest createAvailabilityRequest = new CreateAvailabilityRequest(
-                AVAILABILITY_START_TIME,
-                AVAILABILITY_END_TIME,
-                AVAILABILITY_NOTE
+                FIRST_AVAILABILITY_START_TIME,
+                FIRST_AVAILABILITY_END_TIME,
+                FIRST_AVAILABILITY_NOTE
         );
 
         String jsonCreateAvailabilityRequest = objectMapper.writeValueAsString(createAvailabilityRequest);
@@ -141,9 +159,9 @@ class AvailabilityControllerTests {
         String userToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
 
         CreateAvailabilityRequest createAvailabilityRequest = new CreateAvailabilityRequest(
-                AVAILABILITY_END_TIME,
-                AVAILABILITY_START_TIME,
-                AVAILABILITY_NOTE
+                FIRST_AVAILABILITY_END_TIME,
+                FIRST_AVAILABILITY_START_TIME,
+                FIRST_AVAILABILITY_NOTE
         );
         String jsonCreateAvailabilityRequest = objectMapper.writeValueAsString(createAvailabilityRequest);
 
@@ -167,9 +185,9 @@ class AvailabilityControllerTests {
 
         Availability availability = new Availability(
                 user,
-                AVAILABILITY_START_TIME,
-                AVAILABILITY_END_TIME,
-                AVAILABILITY_NOTE
+                FIRST_AVAILABILITY_START_TIME,
+                FIRST_AVAILABILITY_END_TIME,
+                FIRST_AVAILABILITY_NOTE
         );
 
         availabilityRepository.save(availability);
@@ -182,9 +200,62 @@ class AvailabilityControllerTests {
                 .andExpect(status().isOk())
                 .andExpect(jsonPath("$[0].id").exists())
                 .andExpect(jsonPath("$[0].userId").value(user.getId()))
-                .andExpect(jsonPath("$[0].startTime").value(AVAILABILITY_START_TIME.toString()))
-                .andExpect(jsonPath("$[0].endTime").value(AVAILABILITY_END_TIME.toString()))
-                .andExpect(jsonPath("$[0].note").value(AVAILABILITY_NOTE))
+                .andExpect(jsonPath("$[0].startTime").value(FIRST_AVAILABILITY_START_TIME.toString()))
+                .andExpect(jsonPath("$[0].endTime").value(FIRST_AVAILABILITY_END_TIME.toString()))
+                .andExpect(jsonPath("$[0].note").value(FIRST_AVAILABILITY_NOTE))
+                .andExpect(jsonPath("$[0].createdAt").exists())
+                .andExpect(jsonPath("$.length()").value(1));
+    }
+
+    @Test
+    public void approvedEmployeeCanReadOnlyOwnAvailabilities() throws Exception {
+        String firstUserToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
+        User firstUser = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+
+        Availability firstAvailability = new Availability(
+                firstUser,
+                FIRST_AVAILABILITY_START_TIME,
+                FIRST_AVAILABILITY_END_TIME,
+                FIRST_AVAILABILITY_NOTE
+        );
+        availabilityRepository.save(firstAvailability);
+
+        String secondUserToken = loginAndReturnToken(SECOND_USER_EMAIL, SECOND_USER_PASSWORD);
+        User secondUser = userRepository.findByEmail(SECOND_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+
+        Availability secondAvailability = new Availability(
+                secondUser,
+                SECOND_AVAILABILITY_START_TIME,
+                SECOND_AVAILABILITY_END_TIME,
+                SECOND_AVAILABILITY_NOTE
+        );
+        availabilityRepository.save(secondAvailability);
+
+        RequestBuilder getFirstAvailabilityRequest = get("/api/availabilities/my")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + firstUserToken);
+
+        mockMvc.perform(getFirstAvailabilityRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].userId").value(firstUser.getId()))
+                .andExpect(jsonPath("$[0].startTime").value(FIRST_AVAILABILITY_START_TIME.toString()))
+                .andExpect(jsonPath("$[0].endTime").value(FIRST_AVAILABILITY_END_TIME.toString()))
+                .andExpect(jsonPath("$[0].note").value(FIRST_AVAILABILITY_NOTE))
+                .andExpect(jsonPath("$[0].createdAt").exists())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        RequestBuilder getSecondAvailabilityRequest = get("/api/availabilities/my")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + secondUserToken);
+
+        mockMvc.perform(getSecondAvailabilityRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].userId").value(secondUser.getId()))
+                .andExpect(jsonPath("$[0].startTime").value(SECOND_AVAILABILITY_START_TIME.toString()))
+                .andExpect(jsonPath("$[0].endTime").value(SECOND_AVAILABILITY_END_TIME.toString()))
+                .andExpect(jsonPath("$[0].note").value(SECOND_AVAILABILITY_NOTE))
                 .andExpect(jsonPath("$[0].createdAt").exists())
                 .andExpect(jsonPath("$.length()").value(1));
     }
