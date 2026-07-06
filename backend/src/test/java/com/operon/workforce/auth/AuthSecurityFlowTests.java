@@ -35,13 +35,13 @@ class AuthSecurityFlowTests {
     private static final String FIRST_USER_FIRST_NAME = "Max";
     private static final String FIRST_USER_LAST_NAME = "Muster";
     private static final String FIRST_USER_EMAIL = "max@example.com";
-    private static final String FIRST_USER_PASSWORD = "password123";
+    private static final String FIRST_USER_PASSWORD = "max12345";
 
     // User 2 Data
     private static final String SECOND_USER_FIRST_NAME = "Thomas";
     private static final String SECOND_USER_LAST_NAME = "Mueller";
     private static final String SECOND_USER_EMAIL = "thomas@example.com";
-    private static final String SECOND_USER_PASSWORD = "password123";
+    private static final String SECOND_USER_PASSWORD = "thomas12345";
 
     @Autowired
     private MockMvc mockMvc;

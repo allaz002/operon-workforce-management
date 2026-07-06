@@ -43,13 +43,13 @@ class AvailabilityControllerTests {
     private static final String FIRST_USER_FIRST_NAME = "Max";
     private static final String FIRST_USER_LAST_NAME = "Muster";
     private static final String FIRST_USER_EMAIL = "max@example.com";
-    private static final String FIRST_USER_PASSWORD = "password123";
+    private static final String FIRST_USER_PASSWORD = "max12345";
 
     // User 2 Data
     private static final String SECOND_USER_FIRST_NAME = "Thomas";
     private static final String SECOND_USER_LAST_NAME = "Mueller";
     private static final String SECOND_USER_EMAIL = "thomas@example.com";
-    private static final String SECOND_USER_PASSWORD = "password123";
+    private static final String SECOND_USER_PASSWORD = "thomas12345";
 
     @Autowired
     private MockMvc mockMvc;
@@ -301,6 +301,77 @@ class AvailabilityControllerTests {
                 .header("Authorization", "Bearer " + secondUserToken);
 
         mockMvc.perform(deleteAvailabilityRequest)
+                .andExpect(status().isNotFound());
+
+        assertThat(availabilityRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void approvedUserCanUpdateOwnAvailability() throws Exception {
+        String userToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
+        User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+
+        Availability availability = new Availability(
+                user,
+                FIRST_AVAILABILITY_START_TIME,
+                FIRST_AVAILABILITY_END_TIME,
+                FIRST_AVAILABILITY_NOTE
+        );
+        availabilityRepository.save(availability);
+
+        assertThat(availabilityRepository.count()).isEqualTo(1);
+
+        UpdateAvailabilityRequest updateAvailability = new UpdateAvailabilityRequest(
+                SECOND_AVAILABILITY_START_TIME,
+                SECOND_AVAILABILITY_END_TIME,
+                SECOND_AVAILABILITY_NOTE
+        );
+        String jsonUpdateAvailabilityRequest = objectMapper.writeValueAsString(updateAvailability);
+
+        RequestBuilder updateAvailabilityRequest = put("/api/availabilities/" + availability.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + userToken)
+                .content(jsonUpdateAvailabilityRequest);
+
+        mockMvc.perform(updateAvailabilityRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.userId").value(user.getId()))
+                .andExpect(jsonPath("$.startTime").value(SECOND_AVAILABILITY_START_TIME.toString()))
+                .andExpect(jsonPath("$.endTime").value(SECOND_AVAILABILITY_END_TIME.toString()))
+                .andExpect(jsonPath("$.note").value(SECOND_AVAILABILITY_NOTE))
+                .andExpect(jsonPath("$.createdAt").exists());
+
+        assertThat(availabilityRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void approvedUserCannotUpdateOtherUsersAvailability() throws Exception {
+        User firstUser = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+
+        Availability availability = new Availability(
+                firstUser,
+                FIRST_AVAILABILITY_START_TIME,
+                FIRST_AVAILABILITY_END_TIME,
+                FIRST_AVAILABILITY_NOTE
+        );
+        availabilityRepository.save(availability);
+
+        String secondUserToken = loginAndReturnToken(SECOND_USER_EMAIL, SECOND_USER_PASSWORD);
+
+        UpdateAvailabilityRequest updateAvailability = new UpdateAvailabilityRequest(
+                SECOND_AVAILABILITY_START_TIME,
+                SECOND_AVAILABILITY_END_TIME,
+                SECOND_AVAILABILITY_NOTE
+        );
+        String jsonUpdateAvailabilityRequest = objectMapper.writeValueAsString(updateAvailability);
+
+        RequestBuilder updateAvailabilityRequest = put("/api/availabilities/" + availability.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + secondUserToken)
+                .content(jsonUpdateAvailabilityRequest);
+
+        mockMvc.perform(updateAvailabilityRequest)
                 .andExpect(status().isNotFound());
 
         assertThat(availabilityRepository.count()).isEqualTo(1);

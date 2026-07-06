@@ -46,4 +46,14 @@ public class AvailabilityController {
         return ResponseEntity.noContent().build();
     }
 
+    @PutMapping("/{availabilityId}")
+    public ResponseEntity<AvailabilityResponse> updateAvailability(Authentication authentication, @PathVariable Long availabilityId, @Valid @RequestBody UpdateAvailabilityRequest request) {
+        AuthenticatedUser authenticatedUser = (AuthenticatedUser) authentication.getPrincipal();
+        Long userId = authenticatedUser.userId();
+
+        AvailabilityResponse response = availabilityService.updateAvailability(userId, availabilityId, request);
+
+        return ResponseEntity.ok(response);
+    }
+
 }

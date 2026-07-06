@@ -33,6 +33,7 @@ public class Availability {
 
     public Availability(User user, Instant startTime, Instant endTime, String note) {
         this.user = user;
+        validateTimeRange(startTime, endTime);
         this.startTime = startTime;
         this.endTime = endTime;
         this.note = note;
@@ -61,5 +62,30 @@ public class Availability {
 
     public Instant getCreatedAt() {
         return createdAt;
+    }
+
+    public void setStartTime(Instant startTime) {
+        this.startTime = startTime;
+    }
+
+    public void setEndTime(Instant endTime) {
+        this.endTime = endTime;
+    }
+
+    public void setNote(String note) {
+        this.note = note;
+    }
+
+    public void update(Instant startTime, Instant endTime, String note) {
+        validateTimeRange(startTime, endTime);
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.note = note;
+    }
+
+    public void validateTimeRange(Instant startTime, Instant endTime) {
+        if (!endTime.isAfter(startTime)) {
+            throw new InvalidAvailabilityTimeRangeException();
+        }
     }
 }

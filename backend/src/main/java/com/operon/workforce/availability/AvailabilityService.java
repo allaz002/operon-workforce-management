@@ -27,10 +27,6 @@ public class AvailabilityService {
         Instant startTime = createAvailabilityRequest.startTime();
         Instant endTime = createAvailabilityRequest.endTime();
 
-        if (!endTime.isAfter(startTime)) {
-            throw new InvalidAvailabilityTimeRangeException();
-        }
-
         Availability availability = new Availability(
                 user,
                 startTime,
@@ -39,14 +35,7 @@ public class AvailabilityService {
         );
         Availability savedAvailability = availabilityRepository.save(availability);
 
-        return new AvailabilityResponse(
-                savedAvailability.getId(),
-                savedAvailability.getUser().getId(),
-                savedAvailability.getStartTime(),
-                savedAvailability.getEndTime(),
-                savedAvailability.getNote(),
-                savedAvailability.getCreatedAt()
-        );
+        return toResponse(savedAvailability);
     }
 
     @Transactional(readOnly = true)
@@ -55,14 +44,7 @@ public class AvailabilityService {
         List<AvailabilityResponse> availabilitiesResponse = new ArrayList<>();
 
         for (Availability availability : availabilities) {
-            availabilitiesResponse.add(new AvailabilityResponse(
-                    availability.getId(),
-                    availability.getUser().getId(),
-                    availability.getStartTime(),
-                    availability.getEndTime(),
-                    availability.getNote(),
-                    availability.getCreatedAt()
-            ));
+            availabilitiesResponse.add(toResponse(availability));
         }
         return availabilitiesResponse;
     }
@@ -74,5 +56,31 @@ public class AvailabilityService {
                 .orElseThrow(AvailabilityNotFoundException::new);
 
         availabilityRepository.delete(availability);
+    }
+
+    @Transactional
+    public AvailabilityResponse updateAvailability(Long userId, Long availabilityId, UpdateAvailabilityRequest updateAvailabilityRequest) {
+        Availability availability = availabilityRepository
+                .findByIdAndUser_Id(availabilityId, userId)
+                .orElseThrow(AvailabilityNotFoundException::new);
+
+        Instant startTime = updateAvailabilityRequest.startTime();
+        Instant endTime = updateAvailabilityRequest.endTime();
+        String note = updateAvailabilityRequest.note();
+
+        availability.update(startTime, endTime, note);
+
+        return toResponse(availability);
+    }
+
+    private AvailabilityResponse toResponse(Availability availability) {
+        return new AvailabilityResponse(
+                availability.getId(),
+                availability.getUser().getId(),
+                availability.getStartTime(),
+                availability.getEndTime(),
+                availability.getNote(),
+                availability.getCreatedAt()
+        );
     }
 }
