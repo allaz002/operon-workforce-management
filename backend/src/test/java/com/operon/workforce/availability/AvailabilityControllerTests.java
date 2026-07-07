@@ -51,6 +51,12 @@ class AvailabilityControllerTests {
     private static final String SECOND_USER_EMAIL = "thomas@example.com";
     private static final String SECOND_USER_PASSWORD = "thomas12345";
 
+    // Admin Data
+    private static final String ADMIN_FIRST_NAME = "Administrator";
+    private static final String ADMIN_LAST_NAME = "User";
+    private static final String ADMIN_EMAIL = "admin@operon.local";
+    private static final String ADMIN_PASSWORD = "admin12345";
+
     @Autowired
     private MockMvc mockMvc;
 
@@ -70,19 +76,20 @@ class AvailabilityControllerTests {
     public void prepareDatabase() {
         availabilityRepository.deleteAll();
         userRepository.deleteAll();
-
-        String firstUserPasswordHash = passwordEncoder.encode(FIRST_USER_PASSWORD);
-        User firstUser = new User(FIRST_USER_FIRST_NAME, FIRST_USER_LAST_NAME, FIRST_USER_EMAIL, firstUserPasswordHash,
+        createUser(ADMIN_FIRST_NAME, ADMIN_LAST_NAME, ADMIN_EMAIL, ADMIN_PASSWORD, UserRole.ADMIN);
+        createUser(FIRST_USER_FIRST_NAME, FIRST_USER_LAST_NAME, FIRST_USER_EMAIL, FIRST_USER_PASSWORD,
                 UserRole.EMPLOYEE);
-        firstUser.approve();
-        userRepository.save(firstUser);
-
-        String secondUserPasswordHash = passwordEncoder.encode(SECOND_USER_PASSWORD);
-        User secondUser = new User(SECOND_USER_FIRST_NAME, SECOND_USER_LAST_NAME, SECOND_USER_EMAIL,
-                secondUserPasswordHash,
+        createUser(SECOND_USER_FIRST_NAME, SECOND_USER_LAST_NAME, SECOND_USER_EMAIL, SECOND_USER_PASSWORD,
                 UserRole.EMPLOYEE);
-        secondUser.approve();
-        userRepository.save(secondUser);
+    }
+
+    private void createUser(String firstName, String lastName, String email, String password, UserRole role) {
+        String userPasswordHash = passwordEncoder.encode(password);
+
+        User user = new User(firstName, lastName, email, userPasswordHash, role);
+        user.approve();
+
+        userRepository.save(user);
     }
 
     private String loginAndReturnToken(String email, String password) throws Exception {
@@ -375,5 +382,60 @@ class AvailabilityControllerTests {
                 .andExpect(status().isNotFound());
 
         assertThat(availabilityRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void adminCanReadAllAvailabilities() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        User firstUser = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+        Availability firstAvailability = new Availability(
+                firstUser,
+                FIRST_AVAILABILITY_START_TIME,
+                FIRST_AVAILABILITY_END_TIME,
+                FIRST_AVAILABILITY_NOTE
+        );
+        availabilityRepository.save(firstAvailability);
+
+        User secondUser = userRepository.findByEmail(SECOND_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+        Availability secondAvailability = new Availability(
+                secondUser,
+                SECOND_AVAILABILITY_START_TIME,
+                SECOND_AVAILABILITY_END_TIME,
+                SECOND_AVAILABILITY_NOTE
+        );
+        availabilityRepository.save(secondAvailability);
+
+        RequestBuilder jsonGetAllAvailabilitiesRequest = get("/api/availabilities/admin")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(jsonGetAllAvailabilitiesRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].userId").value(firstUser.getId()))
+                .andExpect(jsonPath("$[0].startTime").value(FIRST_AVAILABILITY_START_TIME.toString()))
+                .andExpect(jsonPath("$[0].endTime").value(FIRST_AVAILABILITY_END_TIME.toString()))
+                .andExpect(jsonPath("$[0].note").value(FIRST_AVAILABILITY_NOTE))
+                .andExpect(jsonPath("$[0].createdAt").exists())
+                .andExpect(jsonPath("$[1].id").exists())
+                .andExpect(jsonPath("$[1].userId").value(secondUser.getId()))
+                .andExpect(jsonPath("$[1].startTime").value(SECOND_AVAILABILITY_START_TIME.toString()))
+                .andExpect(jsonPath("$[1].endTime").value(SECOND_AVAILABILITY_END_TIME.toString()))
+                .andExpect(jsonPath("$[1].note").value(SECOND_AVAILABILITY_NOTE))
+                .andExpect(jsonPath("$[1].createdAt").exists())
+                .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    public void approvedUserCannotReadAllAvailabilities() throws Exception {
+        String userToken = loginAndReturnToken(SECOND_USER_EMAIL, SECOND_USER_PASSWORD);
+
+        RequestBuilder jsonGetAllAvailabilitiesRequest = get("/api/availabilities/admin")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + userToken);
+
+        mockMvc.perform(jsonGetAllAvailabilitiesRequest)
+                .andExpect(status().isForbidden());
     }
 }

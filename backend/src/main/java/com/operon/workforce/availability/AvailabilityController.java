@@ -56,4 +56,11 @@ public class AvailabilityController {
         return ResponseEntity.ok(response);
     }
 
+    @GetMapping("/admin")
+    public ResponseEntity<List<AvailabilityResponse>> getAllAvailabilities() {
+        List<AvailabilityResponse> availabilityResponses = availabilityService.getAllAvailabilities();
+
+        return ResponseEntity.ok(availabilityResponses);
+    }
+
 }

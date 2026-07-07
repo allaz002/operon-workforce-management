@@ -46,6 +46,7 @@ public class AvailabilityService {
         for (Availability availability : availabilities) {
             availabilitiesResponse.add(toResponse(availability));
         }
+
         return availabilitiesResponse;
     }
 
@@ -71,6 +72,18 @@ public class AvailabilityService {
         availability.update(startTime, endTime, note);
 
         return toResponse(availability);
+    }
+
+    @Transactional(readOnly = true)
+    public List<AvailabilityResponse> getAllAvailabilities() {
+        List<Availability> availabilities = availabilityRepository.findAllByOrderByStartTimeAsc();
+        List<AvailabilityResponse> availabilitiesResponses = new ArrayList<>();
+
+        for (Availability availability : availabilities) {
+            availabilitiesResponses.add(toResponse(availability));
+        }
+
+        return availabilitiesResponses;
     }
 
     private AvailabilityResponse toResponse(Availability availability) {

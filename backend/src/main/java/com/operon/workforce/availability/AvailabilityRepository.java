@@ -8,5 +8,7 @@ import java.util.Optional;
 public interface AvailabilityRepository extends JpaRepository<Availability, Long> {
     List<Availability> findByUserIdOrderByStartTimeAsc(Long userId);
 
+    List<Availability> findAllByOrderByStartTimeAsc();
+
     Optional<Availability> findByIdAndUser_Id(Long id, Long userId);
 }
