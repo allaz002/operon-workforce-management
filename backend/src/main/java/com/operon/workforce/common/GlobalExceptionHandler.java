@@ -4,6 +4,7 @@ import com.operon.workforce.auth.InvalidLoginException;
 import com.operon.workforce.auth.UserNotApprovedException;
 import com.operon.workforce.availability.AvailabilityNotFoundException;
 import com.operon.workforce.availability.InvalidAvailabilityTimeRangeException;
+import com.operon.workforce.shift.InvalidShiftTimeRangeException;
 import com.operon.workforce.user.DuplicateEmailException;
 import com.operon.workforce.user.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -112,6 +113,21 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleAvailabilityNotFound(AvailabilityNotFoundException exception, HttpServletRequest request) {
 
         HttpStatus status = HttpStatus.NOT_FOUND;
+        ApiErrorResponse errorResponse = new ApiErrorResponse(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(status).body(errorResponse);
+    }
+
+    @ExceptionHandler(InvalidShiftTimeRangeException.class)
+    public ResponseEntity<ApiErrorResponse> handleInvalidShiftTimeRange(InvalidShiftTimeRangeException exception, HttpServletRequest request) {
+
+        HttpStatus status = HttpStatus.BAD_REQUEST;
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 Instant.now(),
                 status.value(),
