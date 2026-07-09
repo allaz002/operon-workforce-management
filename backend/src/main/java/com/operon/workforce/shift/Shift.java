@@ -83,4 +83,14 @@ public class Shift {
             throw new InvalidShiftTimeRangeException();
         }
     }
+
+    public void update(Instant startTime, Instant endTime, String role, Integer requiredEmployees, String location, String note) {
+        validateTimeRange(startTime, endTime);
+        this.startTime = startTime;
+        this.endTime = endTime;
+        this.role = role;
+        this.requiredEmployees = requiredEmployees;
+        this.location = location;
+        this.note = note;
+    }
 }

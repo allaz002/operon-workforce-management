@@ -26,6 +26,14 @@ public class ShiftController {
     @GetMapping
     public ResponseEntity<List<ShiftResponse>> getAllShifts() {
         List<ShiftResponse> shiftResponses = shiftService.getAllShifts();
+
         return ResponseEntity.status(HttpStatus.OK).body(shiftResponses);
+    }
+
+    @PutMapping("/{shiftId}")
+    public ResponseEntity<ShiftResponse> updateShift(@PathVariable Long shiftId, @Valid @RequestBody UpdateShiftRequest updateShiftRequest) {
+        ShiftResponse shiftResponse = shiftService.updateShift(updateShiftRequest, shiftId);
+
+        return ResponseEntity.ok(shiftResponse);
     }
 }

@@ -40,6 +40,24 @@ public class ShiftService {
         return shiftResponses;
     }
 
+    @Transactional
+    public ShiftResponse updateShift(UpdateShiftRequest updateShiftRequest, Long shiftId) {
+        Shift shift = shiftRepository
+                .findById(shiftId)
+                .orElseThrow(ShiftNotFoundException::new);
+
+        shift.update(
+                updateShiftRequest.startTime(),
+                updateShiftRequest.endTime(),
+                updateShiftRequest.role(),
+                updateShiftRequest.requiredEmployees(),
+                updateShiftRequest.location(),
+                updateShiftRequest.note()
+        );
+
+        return toResponse(shift);
+    }
+
     private ShiftResponse toResponse(Shift shift) {
         return new ShiftResponse(
                 shift.getId(),

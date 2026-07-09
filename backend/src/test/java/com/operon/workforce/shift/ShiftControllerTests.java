@@ -21,8 +21,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -263,5 +262,184 @@ public class ShiftControllerTests {
 
         mockMvc.perform(readAllShiftsRequest)
                 .andExpect(status().isUnauthorized());
+    }
+
+    @Test
+    public void adminCanUpdateShift() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        Shift firstShift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(firstShift);
+        assertThat(shiftRepository.count()).isEqualTo(1);
+
+        UpdateShiftRequest updateShift = new UpdateShiftRequest(
+                SECOND_SHIFT_START_TIME,
+                SECOND_SHIFT_END_TIME,
+                SECOND_SHIFT_ROLE,
+                SECOND_SHIFT_REQUIRED_EMPLOYEES,
+                SECOND_SHIFT_LOCATION,
+                SECOND_SHIFT_NOTE
+        );
+        String jsonUpdateShiftRequest = objectMapper.writeValueAsString(updateShift);
+
+        RequestBuilder updateShiftRequest = put("/api/shifts/" + firstShift.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonUpdateShiftRequest)
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(updateShiftRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.id").value(firstShift.getId()))
+                .andExpect(jsonPath("$.startTime").value(SECOND_SHIFT_START_TIME.toString()))
+                .andExpect(jsonPath("$.endTime").value(SECOND_SHIFT_END_TIME.toString()))
+                .andExpect(jsonPath("$.role").value(SECOND_SHIFT_ROLE))
+                .andExpect(jsonPath("$.requiredEmployees").value(SECOND_SHIFT_REQUIRED_EMPLOYEES))
+                .andExpect(jsonPath("$.location").value(SECOND_SHIFT_LOCATION))
+                .andExpect(jsonPath("$.note").value(SECOND_SHIFT_NOTE))
+                .andExpect(jsonPath("$.createdAt").exists());
+
+        assertThat(shiftRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void approvedUserCannotUpdateShift() throws Exception {
+        String userToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
+
+        Shift firstShift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(firstShift);
+
+        UpdateShiftRequest updateShift = new UpdateShiftRequest(
+                SECOND_SHIFT_START_TIME,
+                SECOND_SHIFT_END_TIME,
+                SECOND_SHIFT_ROLE,
+                SECOND_SHIFT_REQUIRED_EMPLOYEES,
+                SECOND_SHIFT_LOCATION,
+                SECOND_SHIFT_NOTE
+        );
+        String jsonUpdateShiftRequest = objectMapper.writeValueAsString(updateShift);
+
+        assertThat(shiftRepository.count()).isEqualTo(1);
+
+        RequestBuilder updateShiftRequest = put("/api/shifts/" + firstShift.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonUpdateShiftRequest)
+                .header("Authorization", "Bearer " + userToken);
+
+        mockMvc.perform(updateShiftRequest)
+                .andExpect(status().isForbidden());
+
+        assertThat(shiftRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void adminCannotUpdateMissingShiftReturnsNotFound() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        Integer notExistingShiftId = -1;
+
+        assertThat(shiftRepository.count()).isEqualTo(0);
+
+        UpdateShiftRequest updateShift = new UpdateShiftRequest(
+                SECOND_SHIFT_START_TIME,
+                SECOND_SHIFT_END_TIME,
+                SECOND_SHIFT_ROLE,
+                SECOND_SHIFT_REQUIRED_EMPLOYEES,
+                SECOND_SHIFT_LOCATION,
+                SECOND_SHIFT_NOTE
+        );
+        String jsonUpdateShiftRequest = objectMapper.writeValueAsString(updateShift);
+
+        RequestBuilder updateShiftRequest = put("/api/shifts/" + notExistingShiftId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonUpdateShiftRequest)
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(updateShiftRequest)
+                .andExpect(status().isNotFound());
+
+        assertThat(shiftRepository.count()).isEqualTo(0);
+    }
+
+    @Test
+    public void invalidShiftUpdateTimeRangeReturnsBadRequest() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        Shift firstShift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(firstShift);
+
+        UpdateShiftRequest updateShift = new UpdateShiftRequest(
+                SECOND_SHIFT_END_TIME,
+                SECOND_SHIFT_START_TIME,
+                SECOND_SHIFT_ROLE,
+                SECOND_SHIFT_REQUIRED_EMPLOYEES,
+                SECOND_SHIFT_LOCATION,
+                SECOND_SHIFT_NOTE
+        );
+        String jsonUpdateShiftRequest = objectMapper.writeValueAsString(updateShift);
+
+        assertThat(shiftRepository.count()).isEqualTo(1);
+
+        RequestBuilder updateShiftRequest = put("/api/shifts/" + firstShift.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonUpdateShiftRequest)
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(updateShiftRequest)
+                .andExpect(status().isBadRequest());
+
+        assertThat(shiftRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void missingTokenCannotUpdateShift() throws Exception {
+        Shift firstShift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(firstShift);
+
+        UpdateShiftRequest updateShift = new UpdateShiftRequest(
+                SECOND_SHIFT_END_TIME,
+                SECOND_SHIFT_START_TIME,
+                SECOND_SHIFT_ROLE,
+                SECOND_SHIFT_REQUIRED_EMPLOYEES,
+                SECOND_SHIFT_LOCATION,
+                SECOND_SHIFT_NOTE
+        );
+        String jsonUpdateShiftRequest = objectMapper.writeValueAsString(updateShift);
+
+        assertThat(shiftRepository.count()).isEqualTo(1);
+
+        RequestBuilder updateShiftRequest = put("/api/shifts/" + firstShift.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(jsonUpdateShiftRequest);
+
+        mockMvc.perform(updateShiftRequest)
+                .andExpect(status().isUnauthorized());
+
+        assertThat(shiftRepository.count()).isEqualTo(1);
     }
 }
