@@ -21,6 +21,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -47,13 +48,21 @@ public class ShiftControllerTests {
     private static final String ADMIN_EMAIL = "admin@operon.local";
     private static final String ADMIN_PASSWORD = "admin12345";
 
-    // Shifts Data
+    // Shift 1 Data
     private static final Instant FIRST_SHIFT_START_TIME = Instant.parse("2026-01-01T08:00:00Z");
     private static final Instant FIRST_SHIFT_END_TIME = Instant.parse("2026-01-01T14:00:00Z");
     private static final String FIRST_SHIFT_ROLE = "Service";
     private static final Integer FIRST_SHIFT_REQUIRED_EMPLOYEES = 3;
     private static final String FIRST_SHIFT_LOCATION = "Main branch";
     private static final String FIRST_SHIFT_NOTE = "Saturday morning service shift";
+
+    // Shift 2 Data
+    private static final Instant SECOND_SHIFT_START_TIME = Instant.parse("2026-01-02T10:00:00Z");
+    private static final Instant SECOND_SHIFT_END_TIME = Instant.parse("2026-01-02T18:00:00Z");
+    private static final String SECOND_SHIFT_ROLE = "Kitchen";
+    private static final Integer SECOND_SHIFT_REQUIRED_EMPLOYEES = 2;
+    private static final String SECOND_SHIFT_LOCATION = "Main branch";
+    private static final String SECOND_SHIFT_NOTE = "Lunch and afternoon kitchen shift";
 
     @Autowired
     private MockMvc mockMvc;
@@ -196,5 +205,63 @@ public class ShiftControllerTests {
                 .andExpect(status().isBadRequest());
 
         assertThat(shiftRepository.count()).isEqualTo(0);
+    }
+
+    @Test
+    public void approvedUserCanReadAllShifts() throws Exception {
+        String userToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
+
+        Shift firstShift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(firstShift);
+
+        Shift secondShift = new Shift(
+                SECOND_SHIFT_START_TIME,
+                SECOND_SHIFT_END_TIME,
+                SECOND_SHIFT_ROLE,
+                SECOND_SHIFT_REQUIRED_EMPLOYEES,
+                SECOND_SHIFT_LOCATION,
+                SECOND_SHIFT_NOTE
+        );
+        shiftRepository.save(secondShift);
+
+        RequestBuilder readAllShiftsRequest = get("/api/shifts")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + userToken);
+
+        mockMvc.perform(readAllShiftsRequest)
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].startTime").value(FIRST_SHIFT_START_TIME.toString()))
+                .andExpect(jsonPath("$[0].endTime").value(FIRST_SHIFT_END_TIME.toString()))
+                .andExpect(jsonPath("$[0].role").value(FIRST_SHIFT_ROLE))
+                .andExpect(jsonPath("$[0].requiredEmployees").value(FIRST_SHIFT_REQUIRED_EMPLOYEES))
+                .andExpect(jsonPath("$[0].location").value(FIRST_SHIFT_LOCATION))
+                .andExpect(jsonPath("$[0].note").value(FIRST_SHIFT_NOTE))
+                .andExpect(jsonPath("$[0].createdAt").exists())
+                .andExpect(jsonPath("$[1].id").exists())
+                .andExpect(jsonPath("$[1].startTime").value(SECOND_SHIFT_START_TIME.toString()))
+                .andExpect(jsonPath("$[1].endTime").value(SECOND_SHIFT_END_TIME.toString()))
+                .andExpect(jsonPath("$[1].role").value(SECOND_SHIFT_ROLE))
+                .andExpect(jsonPath("$[1].requiredEmployees").value(SECOND_SHIFT_REQUIRED_EMPLOYEES))
+                .andExpect(jsonPath("$[1].location").value(SECOND_SHIFT_LOCATION))
+                .andExpect(jsonPath("$[1].note").value(SECOND_SHIFT_NOTE))
+                .andExpect(jsonPath("$[1].createdAt").exists())
+                .andExpect(jsonPath("$.length()").value(2));
+    }
+
+    @Test
+    public void missingTokenCannotReadShifts() throws Exception {
+        RequestBuilder readAllShiftsRequest = get("/api/shifts")
+                .contentType(MediaType.APPLICATION_JSON);
+
+        mockMvc.perform(readAllShiftsRequest)
+                .andExpect(status().isUnauthorized());
     }
 }

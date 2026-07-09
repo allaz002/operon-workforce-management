@@ -3,6 +3,9 @@ package com.operon.workforce.shift;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 public class ShiftService {
     private final ShiftRepository shiftRepository;
@@ -23,6 +26,18 @@ public class ShiftService {
         );
         Shift savedShift = shiftRepository.save(shift);
         return toResponse(savedShift);
+    }
+
+    @Transactional(readOnly = true)
+    public List<ShiftResponse> getAllShifts() {
+        List<Shift> shifts = shiftRepository.findAllByOrderByStartTimeAsc();
+        List<ShiftResponse> shiftResponses = new ArrayList<>();
+
+        for (Shift shift : shifts) {
+            shiftResponses.add(toResponse(shift));
+        }
+
+        return shiftResponses;
     }
 
     private ShiftResponse toResponse(Shift shift) {
