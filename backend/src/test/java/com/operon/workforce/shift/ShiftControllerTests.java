@@ -348,7 +348,7 @@ public class ShiftControllerTests {
     @Test
     public void adminCannotUpdateMissingShiftReturnsNotFound() throws Exception {
         String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
-        Integer notExistingShiftId = -1;
+        Long notExistingShiftId = -1L;
 
         assertThat(shiftRepository.count()).isEqualTo(0);
 
@@ -439,6 +439,104 @@ public class ShiftControllerTests {
 
         mockMvc.perform(updateShiftRequest)
                 .andExpect(status().isUnauthorized());
+
+        assertThat(shiftRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void adminCanDeleteShiftReturnsNoContent() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+
+        Shift shift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(shift);
+
+        assertThat(shiftRepository.count()).isEqualTo(1);
+
+        RequestBuilder deleteShiftRequest = delete("/api/shifts/" + shift.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(deleteShiftRequest)
+                .andExpect(status().isNoContent());
+
+        assertThat(shiftRepository.count()).isEqualTo(0);
+    }
+
+    @Test
+    public void approvedEmployeeCannotDeleteShift() throws Exception {
+        String userToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
+
+        Shift shift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(shift);
+
+        assertThat(shiftRepository.count()).isEqualTo(1);
+
+        RequestBuilder deleteShiftRequest = delete("/api/shifts/" + shift.getId())
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + userToken);
+
+        mockMvc.perform(deleteShiftRequest)
+                .andExpect(status().isForbidden());
+
+        assertThat(shiftRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void missingTokenCannotDeleteShift() throws Exception {
+        Shift shift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(shift);
+
+        RequestBuilder deleteShiftRequest = delete("/api/shifts/" + shift.getId())
+                .contentType(MediaType.APPLICATION_JSON);
+
+        mockMvc.perform(deleteShiftRequest)
+                .andExpect(status().isUnauthorized());
+
+        assertThat(shiftRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void adminCannotDeleteMissingShiftReturnsNotFound() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        Long missingShiftId = -1L;
+
+        Shift shift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(shift);
+
+        RequestBuilder deleteShiftRequest = delete("/api/shifts/" + missingShiftId)
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(deleteShiftRequest)
+                .andExpect(status().isNotFound());
 
         assertThat(shiftRepository.count()).isEqualTo(1);
     }

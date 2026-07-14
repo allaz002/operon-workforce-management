@@ -58,6 +58,15 @@ public class ShiftService {
         return toResponse(shift);
     }
 
+    @Transactional
+    public void deleteShift(Long shiftId) {
+        Shift shift = shiftRepository
+                .findById(shiftId)
+                .orElseThrow(ShiftNotFoundException::new);
+
+        shiftRepository.delete(shift);
+    }
+
     private ShiftResponse toResponse(Shift shift) {
         return new ShiftResponse(
                 shift.getId(),
