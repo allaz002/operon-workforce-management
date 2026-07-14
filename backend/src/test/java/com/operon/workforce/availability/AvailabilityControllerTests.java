@@ -1,6 +1,7 @@
 package com.operon.workforce.availability;
 
 import com.operon.workforce.auth.LoginRequest;
+import com.operon.workforce.shiftassignment.ShiftAssignmentRepository;
 import com.operon.workforce.user.User;
 import com.operon.workforce.user.UserNotFoundException;
 import com.operon.workforce.user.UserRepository;
@@ -72,8 +73,12 @@ class AvailabilityControllerTests {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private ShiftAssignmentRepository shiftAssignmentRepository;
+
     @BeforeEach
     public void prepareDatabase() {
+        shiftAssignmentRepository.deleteAll();
         availabilityRepository.deleteAll();
         userRepository.deleteAll();
         createUser(ADMIN_FIRST_NAME, ADMIN_LAST_NAME, ADMIN_EMAIL, ADMIN_PASSWORD, UserRole.ADMIN);

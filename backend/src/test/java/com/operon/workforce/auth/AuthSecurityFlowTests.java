@@ -1,6 +1,7 @@
 package com.operon.workforce.auth;
 
 import com.operon.workforce.availability.AvailabilityRepository;
+import com.operon.workforce.shiftassignment.ShiftAssignmentRepository;
 import com.operon.workforce.user.*;
 import org.junit.jupiter.api.BeforeEach;
 import org.junit.jupiter.api.Test;
@@ -58,8 +59,12 @@ class AuthSecurityFlowTests {
     @Autowired
     private AvailabilityRepository availabilityRepository;
 
+    @Autowired
+    private ShiftAssignmentRepository shiftAssignmentRepository;
+
     @BeforeEach
     public void prepareDatabase() {
+        shiftAssignmentRepository.deleteAll();
         availabilityRepository.deleteAll();
         userRepository.deleteAll();
 

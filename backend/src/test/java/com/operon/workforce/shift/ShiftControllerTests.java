@@ -2,6 +2,7 @@ package com.operon.workforce.shift;
 
 import com.operon.workforce.auth.LoginRequest;
 import com.operon.workforce.availability.AvailabilityRepository;
+import com.operon.workforce.shiftassignment.ShiftAssignmentRepository;
 import com.operon.workforce.user.User;
 import com.operon.workforce.user.UserRepository;
 import com.operon.workforce.user.UserRole;
@@ -81,8 +82,12 @@ public class ShiftControllerTests {
     @Autowired
     private ObjectMapper objectMapper;
 
+    @Autowired
+    private ShiftAssignmentRepository shiftAssignmentRepository;
+
     @BeforeEach
     public void prepareDatabase() {
+        shiftAssignmentRepository.deleteAll();
         availabilityRepository.deleteAll();
         shiftRepository.deleteAll();
         userRepository.deleteAll();
