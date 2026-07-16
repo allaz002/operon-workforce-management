@@ -28,6 +28,10 @@ public class ShiftAssignmentService {
         Shift shift = shiftRepository.findById(shiftId).orElseThrow(ShiftNotFoundException::new);
         User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
+        if (shiftAssignmentRepository.existsByShift_IdAndUser_Id(shift.getId(), user.getId())) {
+            throw new ShiftAssignmentAlreadyExistsException();
+        }
+
         ShiftAssignment assignment = new ShiftAssignment(
                 shift,
                 user
