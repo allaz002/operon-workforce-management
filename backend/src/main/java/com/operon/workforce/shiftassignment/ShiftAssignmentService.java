@@ -9,6 +9,9 @@ import com.operon.workforce.user.UserRepository;
 import org.springframework.stereotype.Service;
 import org.springframework.transaction.annotation.Transactional;
 
+import java.util.ArrayList;
+import java.util.List;
+
 @Service
 public class ShiftAssignmentService {
 
@@ -24,7 +27,6 @@ public class ShiftAssignmentService {
 
     @Transactional
     public ShiftAssignmentResponse createShiftAssignment(Long shiftId, Long userId) {
-
         Shift shift = shiftRepository.findById(shiftId).orElseThrow(ShiftNotFoundException::new);
         User user = userRepository.findById(userId).orElseThrow(UserNotFoundException::new);
 
@@ -39,6 +41,19 @@ public class ShiftAssignmentService {
         shiftAssignmentRepository.save(assignment);
 
         return toResponse(assignment);
+    }
+
+    @Transactional
+    public List<ShiftAssignmentResponse> getShiftAssignments(Long shiftId) {
+        shiftRepository.findById(shiftId).orElseThrow(ShiftNotFoundException::new);
+        List<ShiftAssignment> assignments = shiftAssignmentRepository.findByShift_Id(shiftId);
+        List<ShiftAssignmentResponse> responses = new ArrayList<>();
+
+        for (ShiftAssignment assignment : assignments) {
+            responses.add(toResponse(assignment));
+        }
+
+        return responses;
     }
 
     private ShiftAssignmentResponse toResponse(ShiftAssignment shiftAssignment) {

@@ -5,6 +5,8 @@ import org.springframework.http.HttpStatus;
 import org.springframework.http.ResponseEntity;
 import org.springframework.web.bind.annotation.*;
 
+import java.util.List;
+
 @RestController
 @RequestMapping("/api/shifts/{shiftId}/assignments")
 public class ShiftAssignmentController {
@@ -20,5 +22,12 @@ public class ShiftAssignmentController {
                 .createShiftAssignment(shiftId, request.userId());
 
         return ResponseEntity.status(HttpStatus.CREATED).body(response);
+    }
+
+    @GetMapping
+    public ResponseEntity<List<ShiftAssignmentResponse>> getShiftAssignments(@PathVariable Long shiftId) {
+        List<ShiftAssignmentResponse> response = shiftAssignmentService.getShiftAssignments(shiftId);
+
+        return ResponseEntity.status(HttpStatus.OK).body(response);
     }
 }

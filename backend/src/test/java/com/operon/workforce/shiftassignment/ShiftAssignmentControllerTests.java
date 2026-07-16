@@ -24,6 +24,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
 import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
@@ -320,4 +321,148 @@ public class ShiftAssignmentControllerTests {
 
         assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
     }
+
+    @Test
+    public void adminCanReadAssignmentsForShift() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+
+        Shift shift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(shift);
+
+        CreateShiftAssignmentRequest shiftAssignment = new CreateShiftAssignmentRequest(
+                user.getId()
+        );
+
+        RequestBuilder postShiftAssignmentRequest = post("/api/shifts/" + shift.getId() + "/assignments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(shiftAssignment))
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(postShiftAssignmentRequest)
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.shiftId").value(shift.getId()))
+                .andExpect(jsonPath("$.userId").value(user.getId()))
+                .andExpect(jsonPath("$.createdAt").exists())
+                .andExpect(status().isCreated());
+
+        RequestBuilder getShiftAssignmentRequest = get("/api/shifts/" + shift.getId() + "/assignments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(getShiftAssignmentRequest)
+                .andExpect(jsonPath("$[0].id").exists())
+                .andExpect(jsonPath("$[0].shiftId").value(shift.getId()))
+                .andExpect(jsonPath("$[0].userId").value(user.getId()))
+                .andExpect(jsonPath("$[0].createdAt").exists())
+                .andExpect(status().isOk())
+                .andExpect(jsonPath("$.length()").value(1));
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void adminCannotReadAssignmentsForMissingShiftReturnsNotFound() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        Long missingShiftId = -1L;
+
+        RequestBuilder getShiftAssignmentRequest = get("/api/shifts/" + missingShiftId + "/assignments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(getShiftAssignmentRequest)
+                .andExpect(status().isNotFound());
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(0);
+    }
+
+    @Test
+    public void approvedUserCannotReadAssignmentsForShift() throws Exception {
+        String userToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+
+        Shift shift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(shift);
+
+        CreateShiftAssignmentRequest postShiftAssignment = new CreateShiftAssignmentRequest(
+                user.getId()
+        );
+
+        RequestBuilder postShiftAssignmentRequest = post("/api/shifts/" + shift.getId() + "/assignments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(postShiftAssignment))
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(postShiftAssignmentRequest)
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.shiftId").value(shift.getId()))
+                .andExpect(jsonPath("$.userId").value(user.getId()))
+                .andExpect(jsonPath("$.createdAt").exists())
+                .andExpect(status().isCreated());
+
+        RequestBuilder getShiftAssignmentRequest = get("/api/shifts/" + shift.getId() + "/assignments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .header("Authorization", "Bearer " + userToken);
+
+        mockMvc.perform(getShiftAssignmentRequest)
+                .andExpect(status().isForbidden());
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void missingTokenCannotReadAssignmentsForShiftReturnsUnauthorized() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+
+        Shift shift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(shift);
+
+        CreateShiftAssignmentRequest postShiftAssignment = new CreateShiftAssignmentRequest(
+                user.getId()
+        );
+
+        RequestBuilder postShiftAssignmentRequest = post("/api/shifts/" + shift.getId() + "/assignments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(postShiftAssignment))
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(postShiftAssignmentRequest)
+                .andExpect(jsonPath("$.id").exists())
+                .andExpect(jsonPath("$.shiftId").value(shift.getId()))
+                .andExpect(jsonPath("$.userId").value(user.getId()))
+                .andExpect(jsonPath("$.createdAt").exists())
+                .andExpect(status().isCreated());
+
+        RequestBuilder getShiftAssignmentRequest = get("/api/shifts/" + shift.getId() + "/assignments")
+                .contentType(MediaType.APPLICATION_JSON);
+
+        mockMvc.perform(getShiftAssignmentRequest)
+                .andExpect(status().isUnauthorized());
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
+    }
+
 }
