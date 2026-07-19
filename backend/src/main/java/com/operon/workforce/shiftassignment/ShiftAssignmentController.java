@@ -30,4 +30,11 @@ public class ShiftAssignmentController {
 
         return ResponseEntity.status(HttpStatus.OK).body(response);
     }
+
+    @DeleteMapping("/{assignmentId}")
+    public ResponseEntity<Void> deleteShiftAssignment(@PathVariable Long assignmentId, @PathVariable Long shiftId) {
+        shiftAssignmentService.deleteShiftAssignment(assignmentId, shiftId);
+
+        return ResponseEntity.status(HttpStatus.NO_CONTENT).build();
+    }
 }

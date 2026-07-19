@@ -56,6 +56,14 @@ public class ShiftAssignmentService {
         return responses;
     }
 
+    @Transactional
+    public void deleteShiftAssignment(Long assignmentId, Long shiftId) {
+        shiftAssignmentRepository.findByIdAndShift_Id(assignmentId, shiftId)
+                .orElseThrow(ShiftAssignmentNotFoundException::new);
+
+        shiftAssignmentRepository.deleteById(assignmentId);
+    }
+
     private ShiftAssignmentResponse toResponse(ShiftAssignment shiftAssignment) {
         return new ShiftAssignmentResponse(
                 shiftAssignment.getId(),

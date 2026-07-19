@@ -24,8 +24,7 @@ import tools.jackson.databind.ObjectMapper;
 import java.time.Instant;
 
 import static org.assertj.core.api.AssertionsForClassTypes.assertThat;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.get;
-import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.post;
+import static org.springframework.test.web.servlet.request.MockMvcRequestBuilders.*;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.jsonPath;
 import static org.springframework.test.web.servlet.result.MockMvcResultMatchers.status;
 
@@ -129,6 +128,38 @@ public class ShiftAssignmentControllerTests {
         String loginResponseBody = loginResult.getResponse().getContentAsString();
         JsonNode loginResponseJson = objectMapper.readTree(loginResponseBody);
         return loginResponseJson.get("token").asString();
+    }
+
+    private Shift createFirstShift() {
+        Shift shift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+
+        return shiftRepository.save(shift);
+    }
+
+    private Shift createSecondShift() {
+        Shift shift = new Shift(
+                SECOND_SHIFT_START_TIME,
+                SECOND_SHIFT_END_TIME,
+                SECOND_SHIFT_ROLE,
+                SECOND_SHIFT_REQUIRED_EMPLOYEES,
+                SECOND_SHIFT_LOCATION,
+                SECOND_SHIFT_NOTE
+        );
+
+        return shiftRepository.save(shift);
+    }
+
+    private ShiftAssignment createAssignment(Shift shift, User user) {
+        ShiftAssignment assignment = new ShiftAssignment(shift, user);
+
+        return shiftAssignmentRepository.save(assignment);
     }
 
     @Test
@@ -465,4 +496,108 @@ public class ShiftAssignmentControllerTests {
         assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
     }
 
+    @Test
+    public void adminCanDeleteAssignmentForShift() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+        Shift shift = createFirstShift();
+        ShiftAssignment assignment = createAssignment(shift, user);
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
+
+        RequestBuilder deleteShiftAssignmentRequest =
+                delete("/api/shifts/" + shift.getId() + "/assignments/" + assignment.getId())
+                        .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(deleteShiftAssignmentRequest)
+                .andExpect(status().isNoContent());
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(0);
+    }
+
+    @Test
+    public void approvedUserCannotDeleteAssignmentForShiftReturnsForbidden() throws Exception {
+        String userToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
+        User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+        Shift shift = createFirstShift();
+        ShiftAssignment assignment = createAssignment(shift, user);
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
+
+        RequestBuilder deleteShiftAssignmentRequest =
+                delete("/api/shifts/" + shift.getId() + "/assignments/" + assignment.getId())
+                        .header("Authorization", "Bearer " + userToken);
+
+        mockMvc.perform(deleteShiftAssignmentRequest)
+                .andExpect(status().isForbidden());
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void missingTokenCannotDeleteAssignmentForShiftReturnsUnauthorized() throws Exception {
+        User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+        Shift shift = createFirstShift();
+        ShiftAssignment assignment = createAssignment(shift, user);
+
+        RequestBuilder deleteShiftAssignmentRequest =
+                delete("/api/shifts/" + shift.getId() + "/assignments/" + assignment.getId());
+
+        mockMvc.perform(deleteShiftAssignmentRequest)
+                .andExpect(status().isUnauthorized());
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void adminCannotDeleteAssignmentForMissingShiftReturnsNotFound() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+        Shift shift = createFirstShift();
+        ShiftAssignment assignment = createAssignment(shift, user);
+        Long missingShiftId = -1L;
+
+        RequestBuilder deleteShiftAssignmentRequest =
+                delete("/api/shifts/" + missingShiftId + "/assignments/" + assignment.getId())
+                        .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(deleteShiftAssignmentRequest)
+                .andExpect(status().isNotFound());
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void adminCannotDeleteMissingAssignmentForShiftReturnsNotFound() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        Shift shift = createFirstShift();
+        Long missingAssignmentId = -1L;
+
+        RequestBuilder deleteShiftAssignmentRequest =
+                delete("/api/shifts/" + shift.getId() + "/assignments/" + missingAssignmentId)
+                        .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(deleteShiftAssignmentRequest)
+                .andExpect(status().isNotFound());
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(0);
+    }
+
+    @Test
+    public void adminCannotDeleteAssignmentFromWrongShiftReturnsNotFound() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+        Shift firstShift = createFirstShift();
+        Shift secondShift = createSecondShift();
+        ShiftAssignment assignment = createAssignment(firstShift, user);
+
+        RequestBuilder deleteShiftAssignmentRequest =
+                delete("/api/shifts/" + secondShift.getId() + "/assignments/" + assignment.getId())
+                        .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(deleteShiftAssignmentRequest)
+                .andExpect(status().isNotFound());
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
+    }
 }

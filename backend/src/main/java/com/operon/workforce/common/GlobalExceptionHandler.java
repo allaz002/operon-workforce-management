@@ -7,6 +7,7 @@ import com.operon.workforce.availability.InvalidAvailabilityTimeRangeException;
 import com.operon.workforce.shift.InvalidShiftTimeRangeException;
 import com.operon.workforce.shift.ShiftNotFoundException;
 import com.operon.workforce.shiftassignment.ShiftAssignmentAlreadyExistsException;
+import com.operon.workforce.shiftassignment.ShiftAssignmentNotFoundException;
 import com.operon.workforce.user.DuplicateEmailException;
 import com.operon.workforce.user.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -160,6 +161,20 @@ public class GlobalExceptionHandler {
     public ResponseEntity<ApiErrorResponse> handleShiftAssignmentAlreadyExists(ShiftAssignmentAlreadyExistsException exception, HttpServletRequest request) {
 
         HttpStatus status = HttpStatus.CONFLICT;
+        ApiErrorResponse errorResponse = new ApiErrorResponse(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(status).body(errorResponse);
+    }
+
+    @ExceptionHandler(ShiftAssignmentNotFoundException.class)
+    public ResponseEntity<ApiErrorResponse> handleShiftAssignmentNotFound(ShiftAssignmentNotFoundException exception, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.NOT_FOUND;
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 Instant.now(),
                 status.value(),
