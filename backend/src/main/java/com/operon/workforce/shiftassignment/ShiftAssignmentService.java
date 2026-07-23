@@ -34,6 +34,14 @@ public class ShiftAssignmentService {
             throw new ShiftAssignmentAlreadyExistsException();
         }
 
+        if (shiftAssignmentRepository.existsByUser_IdAndShift_StartTimeLessThanAndShift_EndTimeGreaterThan(
+                user.getId(),
+                shift.getEndTime(),
+                shift.getStartTime()
+        )) {
+            throw new ShiftAssignmentOverlapException();
+        }
+
         if (shiftAssignmentRepository.countByShift_Id(shiftId) >= shift.getRequiredEmployees()) {
             throw new ShiftAssignmentCapacityExceededException();
         }

@@ -9,6 +9,7 @@ import com.operon.workforce.shift.ShiftNotFoundException;
 import com.operon.workforce.shiftassignment.ShiftAssignmentAlreadyExistsException;
 import com.operon.workforce.shiftassignment.ShiftAssignmentCapacityExceededException;
 import com.operon.workforce.shiftassignment.ShiftAssignmentNotFoundException;
+import com.operon.workforce.shiftassignment.ShiftAssignmentOverlapException;
 import com.operon.workforce.user.DuplicateEmailException;
 import com.operon.workforce.user.UserNotFoundException;
 import jakarta.servlet.http.HttpServletRequest;
@@ -189,6 +190,20 @@ public class GlobalExceptionHandler {
 
     @ExceptionHandler(ShiftAssignmentCapacityExceededException.class)
     public ResponseEntity<ApiErrorResponse> handleShiftAssignmentCapacityExceededException(ShiftAssignmentCapacityExceededException exception, HttpServletRequest request) {
+        HttpStatus status = HttpStatus.CONFLICT;
+        ApiErrorResponse errorResponse = new ApiErrorResponse(
+                Instant.now(),
+                status.value(),
+                status.getReasonPhrase(),
+                exception.getMessage(),
+                request.getRequestURI()
+        );
+
+        return ResponseEntity.status(status).body(errorResponse);
+    }
+
+    @ExceptionHandler(ShiftAssignmentOverlapException.class)
+    public ResponseEntity<ApiErrorResponse> handleShiftAssignmentOverlapException(ShiftAssignmentOverlapException exception, HttpServletRequest request) {
         HttpStatus status = HttpStatus.CONFLICT;
         ApiErrorResponse errorResponse = new ApiErrorResponse(
                 Instant.now(),

@@ -504,4 +504,36 @@ public class ShiftAssignmentControllerTests {
 
         assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
     }
+
+    @Test
+    public void adminCannotAssignUserToOverlappingShiftReturnsConflict() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+        Shift firstShift = createFirstShift();
+        createAssignment(firstShift, user);
+
+        Shift secondShift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                FIRST_SHIFT_REQUIRED_EMPLOYEES,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(secondShift);
+
+        CreateShiftAssignmentRequest shiftAssignment = new CreateShiftAssignmentRequest(
+                user.getId()
+        );
+
+        RequestBuilder shiftAssignmentRequest = post("/api/shifts/" + secondShift.getId() + "/assignments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(shiftAssignment))
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(shiftAssignmentRequest)
+                .andExpect(status().isConflict());
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
+    }
 }
