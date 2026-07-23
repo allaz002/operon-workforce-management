@@ -184,7 +184,7 @@ class AvailabilityControllerTests {
         mockMvc.perform(postCreateAvailability)
                 .andExpect(status().isBadRequest())
                 .andExpect(jsonPath("$.error").value("Bad Request"))
-                .andExpect(jsonPath("$.message").value(InvalidAvailabilityTimeRangeException.errorMessage));
+                .andExpect(jsonPath("$.message").value(InvalidAvailabilityTimeRangeException.MESSAGE));
 
         assertThat(availabilityRepository.count()).isZero();
     }

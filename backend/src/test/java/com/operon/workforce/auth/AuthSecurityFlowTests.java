@@ -167,7 +167,7 @@ class AuthSecurityFlowTests {
         mockMvc.perform(postLogin)
                 .andExpect(status().isForbidden())
                 .andExpect(jsonPath("$.error").value("Forbidden"))
-                .andExpect(jsonPath("$.message").value(UserNotApprovedException.errorMessage));
+                .andExpect(jsonPath("$.message").value(UserNotApprovedException.MESSAGE));
     }
 
     @Test
