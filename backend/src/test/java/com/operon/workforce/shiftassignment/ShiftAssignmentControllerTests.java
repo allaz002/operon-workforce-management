@@ -166,16 +166,7 @@ public class ShiftAssignmentControllerTests {
     public void adminCanAssignApprovedUserToShift() throws Exception {
         String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
         User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
-
-        Shift shift = new Shift(
-                FIRST_SHIFT_START_TIME,
-                FIRST_SHIFT_END_TIME,
-                FIRST_SHIFT_ROLE,
-                FIRST_SHIFT_REQUIRED_EMPLOYEES,
-                FIRST_SHIFT_LOCATION,
-                FIRST_SHIFT_NOTE
-        );
-        shiftRepository.save(shift);
+        Shift shift = createFirstShift();
 
         CreateShiftAssignmentRequest shiftAssignment = new CreateShiftAssignmentRequest(
                 user.getId()
@@ -200,16 +191,7 @@ public class ShiftAssignmentControllerTests {
     public void approvedEmployeeCannotAssignUserToShift() throws Exception {
         String userToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
         User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
-
-        Shift shift = new Shift(
-                FIRST_SHIFT_START_TIME,
-                FIRST_SHIFT_END_TIME,
-                FIRST_SHIFT_ROLE,
-                FIRST_SHIFT_REQUIRED_EMPLOYEES,
-                FIRST_SHIFT_LOCATION,
-                FIRST_SHIFT_NOTE
-        );
-        shiftRepository.save(shift);
+        Shift shift = createFirstShift();
 
         CreateShiftAssignmentRequest shiftAssignment = new CreateShiftAssignmentRequest(
                 user.getId()
@@ -229,16 +211,7 @@ public class ShiftAssignmentControllerTests {
     @Test
     public void missingTokenCannotAssignUserToShift() throws Exception {
         User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
-
-        Shift shift = new Shift(
-                FIRST_SHIFT_START_TIME,
-                FIRST_SHIFT_END_TIME,
-                FIRST_SHIFT_ROLE,
-                FIRST_SHIFT_REQUIRED_EMPLOYEES,
-                FIRST_SHIFT_LOCATION,
-                FIRST_SHIFT_NOTE
-        );
-        shiftRepository.save(shift);
+        Shift shift = createFirstShift();
 
         CreateShiftAssignmentRequest shiftAssignment = new CreateShiftAssignmentRequest(
                 user.getId()
@@ -260,16 +233,6 @@ public class ShiftAssignmentControllerTests {
         User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
         Long missingShiftId = -1L;
 
-        Shift shift = new Shift(
-                FIRST_SHIFT_START_TIME,
-                FIRST_SHIFT_END_TIME,
-                FIRST_SHIFT_ROLE,
-                FIRST_SHIFT_REQUIRED_EMPLOYEES,
-                FIRST_SHIFT_LOCATION,
-                FIRST_SHIFT_NOTE
-        );
-        shiftRepository.save(shift);
-
         CreateShiftAssignmentRequest shiftAssignment = new CreateShiftAssignmentRequest(
                 user.getId()
         );
@@ -290,16 +253,7 @@ public class ShiftAssignmentControllerTests {
     public void adminCannotAssignMissingUserToShiftReturnsNotFound() throws Exception {
         String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
         Long missingUserId = -1L;
-
-        Shift shift = new Shift(
-                FIRST_SHIFT_START_TIME,
-                FIRST_SHIFT_END_TIME,
-                FIRST_SHIFT_ROLE,
-                FIRST_SHIFT_REQUIRED_EMPLOYEES,
-                FIRST_SHIFT_LOCATION,
-                FIRST_SHIFT_NOTE
-        );
-        shiftRepository.save(shift);
+        Shift shift = createFirstShift();
 
         CreateShiftAssignmentRequest shiftAssignment = new CreateShiftAssignmentRequest(
                 missingUserId
@@ -320,16 +274,7 @@ public class ShiftAssignmentControllerTests {
     public void adminCannotAssignSameUserToSameShiftTwiceReturnsConflict() throws Exception {
         String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
         User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
-
-        Shift shift = new Shift(
-                FIRST_SHIFT_START_TIME,
-                FIRST_SHIFT_END_TIME,
-                FIRST_SHIFT_ROLE,
-                FIRST_SHIFT_REQUIRED_EMPLOYEES,
-                FIRST_SHIFT_LOCATION,
-                FIRST_SHIFT_NOTE
-        );
-        shiftRepository.save(shift);
+        Shift shift = createFirstShift();
 
         CreateShiftAssignmentRequest shiftAssignment = new CreateShiftAssignmentRequest(
                 user.getId()
@@ -357,32 +302,8 @@ public class ShiftAssignmentControllerTests {
     public void adminCanReadAssignmentsForShift() throws Exception {
         String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
         User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
-
-        Shift shift = new Shift(
-                FIRST_SHIFT_START_TIME,
-                FIRST_SHIFT_END_TIME,
-                FIRST_SHIFT_ROLE,
-                FIRST_SHIFT_REQUIRED_EMPLOYEES,
-                FIRST_SHIFT_LOCATION,
-                FIRST_SHIFT_NOTE
-        );
-        shiftRepository.save(shift);
-
-        CreateShiftAssignmentRequest shiftAssignment = new CreateShiftAssignmentRequest(
-                user.getId()
-        );
-
-        RequestBuilder postShiftAssignmentRequest = post("/api/shifts/" + shift.getId() + "/assignments")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(shiftAssignment))
-                .header("Authorization", "Bearer " + adminToken);
-
-        mockMvc.perform(postShiftAssignmentRequest)
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.shiftId").value(shift.getId()))
-                .andExpect(jsonPath("$.userId").value(user.getId()))
-                .andExpect(jsonPath("$.createdAt").exists())
-                .andExpect(status().isCreated());
+        Shift shift = createFirstShift();
+        createAssignment(shift, user);
 
         RequestBuilder getShiftAssignmentRequest = get("/api/shifts/" + shift.getId() + "/assignments")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -417,34 +338,9 @@ public class ShiftAssignmentControllerTests {
     @Test
     public void approvedUserCannotReadAssignmentsForShift() throws Exception {
         String userToken = loginAndReturnToken(FIRST_USER_EMAIL, FIRST_USER_PASSWORD);
-        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
         User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
-
-        Shift shift = new Shift(
-                FIRST_SHIFT_START_TIME,
-                FIRST_SHIFT_END_TIME,
-                FIRST_SHIFT_ROLE,
-                FIRST_SHIFT_REQUIRED_EMPLOYEES,
-                FIRST_SHIFT_LOCATION,
-                FIRST_SHIFT_NOTE
-        );
-        shiftRepository.save(shift);
-
-        CreateShiftAssignmentRequest postShiftAssignment = new CreateShiftAssignmentRequest(
-                user.getId()
-        );
-
-        RequestBuilder postShiftAssignmentRequest = post("/api/shifts/" + shift.getId() + "/assignments")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(postShiftAssignment))
-                .header("Authorization", "Bearer " + adminToken);
-
-        mockMvc.perform(postShiftAssignmentRequest)
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.shiftId").value(shift.getId()))
-                .andExpect(jsonPath("$.userId").value(user.getId()))
-                .andExpect(jsonPath("$.createdAt").exists())
-                .andExpect(status().isCreated());
+        Shift shift = createFirstShift();
+        createAssignment(shift, user);
 
         RequestBuilder getShiftAssignmentRequest = get("/api/shifts/" + shift.getId() + "/assignments")
                 .contentType(MediaType.APPLICATION_JSON)
@@ -458,34 +354,9 @@ public class ShiftAssignmentControllerTests {
 
     @Test
     public void missingTokenCannotReadAssignmentsForShiftReturnsUnauthorized() throws Exception {
-        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
         User user = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
-
-        Shift shift = new Shift(
-                FIRST_SHIFT_START_TIME,
-                FIRST_SHIFT_END_TIME,
-                FIRST_SHIFT_ROLE,
-                FIRST_SHIFT_REQUIRED_EMPLOYEES,
-                FIRST_SHIFT_LOCATION,
-                FIRST_SHIFT_NOTE
-        );
-        shiftRepository.save(shift);
-
-        CreateShiftAssignmentRequest postShiftAssignment = new CreateShiftAssignmentRequest(
-                user.getId()
-        );
-
-        RequestBuilder postShiftAssignmentRequest = post("/api/shifts/" + shift.getId() + "/assignments")
-                .contentType(MediaType.APPLICATION_JSON)
-                .content(objectMapper.writeValueAsString(postShiftAssignment))
-                .header("Authorization", "Bearer " + adminToken);
-
-        mockMvc.perform(postShiftAssignmentRequest)
-                .andExpect(jsonPath("$.id").exists())
-                .andExpect(jsonPath("$.shiftId").value(shift.getId()))
-                .andExpect(jsonPath("$.userId").value(user.getId()))
-                .andExpect(jsonPath("$.createdAt").exists())
-                .andExpect(status().isCreated());
+        Shift shift = createFirstShift();
+        createAssignment(shift, user);
 
         RequestBuilder getShiftAssignmentRequest = get("/api/shifts/" + shift.getId() + "/assignments")
                 .contentType(MediaType.APPLICATION_JSON);
@@ -597,6 +468,39 @@ public class ShiftAssignmentControllerTests {
 
         mockMvc.perform(deleteShiftAssignmentRequest)
                 .andExpect(status().isNotFound());
+
+        assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
+    }
+
+    @Test
+    public void adminCannotAssignUserWhenShiftIsAlreadyFullReturnsConflict() throws Exception {
+        String adminToken = loginAndReturnToken(ADMIN_EMAIL, ADMIN_PASSWORD);
+        User firstUser = userRepository.findByEmail(FIRST_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+        User secondUser = userRepository.findByEmail(SECOND_USER_EMAIL).orElseThrow(UserNotFoundException::new);
+
+        Shift shift = new Shift(
+                FIRST_SHIFT_START_TIME,
+                FIRST_SHIFT_END_TIME,
+                FIRST_SHIFT_ROLE,
+                1,
+                FIRST_SHIFT_LOCATION,
+                FIRST_SHIFT_NOTE
+        );
+        shiftRepository.save(shift);
+
+        createAssignment(shift, firstUser);
+
+        CreateShiftAssignmentRequest shiftAssignment = new CreateShiftAssignmentRequest(
+                secondUser.getId()
+        );
+
+        RequestBuilder shiftAssignmentRequest = post("/api/shifts/" + shift.getId() + "/assignments")
+                .contentType(MediaType.APPLICATION_JSON)
+                .content(objectMapper.writeValueAsString(shiftAssignment))
+                .header("Authorization", "Bearer " + adminToken);
+
+        mockMvc.perform(shiftAssignmentRequest)
+                .andExpect(status().isConflict());
 
         assertThat(shiftAssignmentRepository.count()).isEqualTo(1);
     }

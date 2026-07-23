@@ -34,6 +34,10 @@ public class ShiftAssignmentService {
             throw new ShiftAssignmentAlreadyExistsException();
         }
 
+        if (shiftAssignmentRepository.countByShift_Id(shiftId) >= shift.getRequiredEmployees()) {
+            throw new ShiftAssignmentCapacityExceededException();
+        }
+
         ShiftAssignment assignment = new ShiftAssignment(
                 shift,
                 user

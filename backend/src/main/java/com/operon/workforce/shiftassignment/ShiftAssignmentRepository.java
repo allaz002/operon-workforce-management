@@ -11,4 +11,6 @@ public interface ShiftAssignmentRepository extends JpaRepository<ShiftAssignment
     List<ShiftAssignment> findByShift_Id(Long shiftId);
 
     Optional<ShiftAssignment> findByIdAndShift_Id(Long assignmentId, Long shiftId);
+
+    long countByShift_Id(Long shiftId);
 }
